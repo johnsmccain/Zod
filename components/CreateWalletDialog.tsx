@@ -1,219 +1,171 @@
 'use client'
 
 import { useState } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { useWallet } from '@/hooks/useWallet'
+import { MnemonicStep } from '../components/MnemonicStep'
+import { ConfirmStep } from '../components/Createss'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent } from '@/components/ui/card'
-import { useWallet } from '@/hooks/useWallet'
-import { Copy, Check } from 'lucide-react'
 import toast from 'react-hot-toast'
-
+import Image from 'next/image'
+import row from '../public/bck.png'
+import shield from '../public/shield.png'
+import  Complete  from './Complete'
 interface CreateWalletDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  onComplete: () => void
 }
 
-export function CreateWalletDialog({ open, onOpenChange }: CreateWalletDialogProps) {
+export function CreateWalletDialog({ onComplete }: CreateWalletDialogProps) {
   const { createWallet, isLoading } = useWallet()
-  const [step, setStep] = useState<'password' | 'mnemonic' | 'confirm'>('password')
+  const [step, setStep] = useState<'password' | 'mnemonic' | 'confirm' | 'complete'>('password')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [mnemonic, setMnemonic] = useState('')
   const [selectedWords, setSelectedWords] = useState<string[]>([])
-  const [copied, setCopied] = useState(false)
 
   const handleCreateWallet = async () => {
     if (password !== confirmPassword) {
       toast.error('Passwords do not match')
       return
     }
-
     if (password.length < 8) {
       toast.error('Password must be at least 8 characters')
       return
     }
-
     try {
-      const result = await createWallet(password)
-      console.log(result)
-      setMnemonic(result.mnemonic)
-      setStep('mnemonic')
+      // Simulate loading delay (placeholder for backend)
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Progress to the next step for frontend testing
+      setStep('mnemonic');
+      // Mock mnemonic for UI testing (to be replaced by backend)
+      setMnemonic('test-word-1 test-word-2 test-word-3 test-word-4 test-word-5 test-word-6 test-word-7 test-word-8 test-word-9 test-word-10 test-word-11 test-word-12');
     } catch (error) {
-      // Error is handled in the hook
+      // Error is handled in the hook (placeholder for backend)
     }
   }
 
-  const copyMnemonic = async () => {
-    try {
-      await navigator.clipboard.writeText(mnemonic)
-      setCopied(true)
-      toast.success('Mnemonic copied to clipboard')
-      setTimeout(() => setCopied(false), 2000)
-    } catch (error) {
-      toast.error('Failed to copy mnemonic')
-    }
-  }
-
-  const confirmMnemonic = () => {
-    setStep('confirm')
-    const words = mnemonic.split(' ')
-    // Shuffle words for confirmation
-    const shuffled = [...words].sort(() => Math.random() - 0.5)
-    setSelectedWords(shuffled)
-  }
-
-  const selectWord = (word: string) => {
-    const currentSelection = selectedWords.slice(0, mnemonic.split(' ').length)
-    if (currentSelection.length < mnemonic.split(' ').length) {
-      setSelectedWords([...currentSelection, word])
-    }
-  }
-
-  const isConfirmationCorrect = () => {
-    const originalWords = mnemonic.split(' ')
-    const currentSelection = selectedWords.slice(0, originalWords.length)
-    return originalWords.every((word, index) => word === currentSelection[index])
-  }
-
-  const handleComplete = () => {
-    if (isConfirmationCorrect()) {
-      toast.success('Wallet created successfully!')
-      onOpenChange(false)
-      // Reset form
-      setStep('password')
-      setPassword('')
-      setConfirmPassword('')
-      setMnemonic('')
-      setSelectedWords([])
-    } else {
-      toast.error('Incorrect word order. Please try again.')
-      setSelectedWords([])
-    }
-  }
-
-  const resetDialog = () => {
+  const resetFlow = () => {
     setStep('password')
     setPassword('')
     setConfirmPassword('')
     setMnemonic('')
     setSelectedWords([])
-    setCopied(false)
+    onComplete()
   }
 
-  return (
-    <Dialog open={open} onOpenChange={(open) => {
-      onOpenChange(open)
-      if (!open) resetDialog()
-    }}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Create New Wallet</DialogTitle>
-          <DialogDescription>
-            {step === 'password' && 'Set a secure password to protect your wallet'}
-            {step === 'mnemonic' && 'Save your recovery phrase in a secure location'}
-            {step === 'confirm' && 'Confirm your recovery phrase by selecting words in order'}
-          </DialogDescription>
-        </DialogHeader>
+  // Map step to step number
+  const getStepNumber = () => {
+    switch (step) {
+      case 'password':
+        return 1;
+      case 'mnemonic':
+        return 2;
+      case 'confirm':
+        return 3;
+      case 'complete':
+        return 4;
+    }
+  };
 
+  return (
+    <div className="min-h-screen bg-[#0D1117] text-white p-4 w-full flex flex-col relative" style={{ 
+      background: 'linear-gradient(to right, #0D1117 70%)',
+      position: 'relative',
+    }}>
+      <div className="absolute top-0 right-0 w-1/2 h-full bg-[radial-gradient(circle_at_right,_rgba(0,242,255,0.2)_0%,_transparent_70%)]" style={{ filter: 'blur(20px)' }}></div>
+      <header className="p-4 border-b border-gray-800 mt-8 z-10 relative">
+        <div className="flex items-center justify-center mb-8">
+          <button
+            onClick={resetFlow}
+            className="text-cyan-400 hover:text-cyan-300"
+          >
+            <Image src={row} alt="" />
+          </button>
+          <div className="text-center flex-1">
+            <h1 className="text-lg font-semibold">Create Wallet</h1>
+            <div className="text-sm text-gray-400">Step {getStepNumber()} of 4</div>
+          </div>
+          <div className="w-6"></div>
+        </div>
+        <div className="w-full bg-gray-700 h-4 mt-2 rounded-full overflow-hidden z-10 relative">
+          <div
+            className="bg-cyan-400 h-4"
+            style={{ width: step === 'password' ? '25%' : step === 'mnemonic' ? '50%' : '75%' }}
+          ></div>
+        </div>
+      </header>
+
+      <main className="p-6 space-y-6 overflow-auto h-[calc(100vh-64px)] z-10 relative">
         {step === 'password' && (
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter a secure password"
-              />
+          <div className="space-y-6">
+            <div className='text-center space-y-2'>
+              <h2 className="text-xl font-bold text-cyan-400">Secure Your Wallet</h2>
+              <p className="text-gray-400">Create a strong password to protect your wallet.</p>
             </div>
-            <div>
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirm your password"
-              />
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm text-gray-400">Enter password (min 8 characters)</label>
+                <Input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-gray-800 border-gray-700 text-white placeholder-gray-500 mt-1"
+                  placeholder="Enter password"
+                />
+              </div>
+              <div>
+                <label className="text-sm text-gray-400">Confirm Password</label>
+                <Input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full bg-gray-800 border-gray-700 text-white placeholder-gray-500 mt-1"
+                  placeholder="Confirm password"
+                />
+              </div>
             </div>
-            <Button 
-              onClick={handleCreateWallet} 
+            <div className="bg-gray-800 p-4 rounded-lg flex flex-col items-start justify-between">
+              <div className="flex items-start">
+                <Image src={shield} alt="Security Shield" className="w-6 h-6 mr-3 mt-1" />
+                <div>
+                  <h3 className="text-sm font-medium text-gray-200">Security Tips:</h3>
+                  <ul className="text-sm text-gray-400 list-disc pl-4 mt-1">
+                    <li>Use a mix of letters, numbers, and symbols.</li>
+                    <li>Don't use personal information.</li>
+                    <li>Make it unique to this wallet.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <Button
+              onClick={handleCreateWallet}
               disabled={isLoading || !password || !confirmPassword}
-              className="w-full"
+              className="w-full bg-[#00F2FF] text-white text-lg py-3 rounded-lg z-10 relative"
             >
-              {isLoading ? 'Creating...' : 'Create Wallet'}
+              {isLoading ? 'Creating...' : 'Continue'}
             </Button>
           </div>
         )}
 
         {step === 'mnemonic' && (
-          <div className="space-y-4">
-            <div className="p-4 bg-muted rounded-lg">
-              <p className="text-sm font-medium mb-2">Your Recovery Phrase</p>
-              <p className="text-sm text-muted-foreground mb-3">
-                Write down these 12 words in the exact order shown. Store them in a secure location.
-              </p>
-              <div className="grid grid-cols-3 gap-2 text-sm">
-                {mnemonic.split(' ').map((word, index) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <span className="text-muted-foreground">{index + 1}.</span>
-                    <span className="font-mono">{word}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <Button 
-              variant="outline" 
-              onClick={copyMnemonic}
-              className="w-full"
-            >
-              {copied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
-              {copied ? 'Copied!' : 'Copy to Clipboard'}
-            </Button>
-            <Button onClick={confirmMnemonic} className="w-full">
-              I've Saved My Recovery Phrase
-            </Button>
-          </div>
+          <MnemonicStep
+            mnemonic={mnemonic}
+            setStep={setStep}
+          />
         )}
 
         {step === 'confirm' && (
-          <div className="space-y-4">
-            <div>
-              <p className="text-sm font-medium mb-2">Select words in the correct order:</p>
-              <div className="grid grid-cols-3 gap-2 mb-4">
-                {selectedWords.slice(0, mnemonic.split(' ').length).map((word, index) => (
-                  <div key={index} className="p-2 bg-muted rounded text-sm text-center">
-                    {index + 1}. {word}
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              {selectedWords.map((word, index) => (
-                <Button
-                  key={index}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => selectWord(word)}
-                  disabled={selectedWords.slice(0, mnemonic.split(' ').length).includes(word)}
-                >
-                  {word}
-                </Button>
-              ))}
-            </div>
-            <Button 
-              onClick={handleComplete}
-              disabled={!isConfirmationCorrect()}
-              className="w-full"
-            >
-              Complete Setup
-            </Button>
-          </div>
+          <ConfirmStep
+            mnemonic={mnemonic}
+            selectedWords={selectedWords}
+            setSelectedWords={setSelectedWords}
+            onComplete={resetFlow}
+          />
         )}
-      </DialogContent>
-    </Dialog>
+         {step === 'complete' && (
+          <Complete />
+        )}
+      </main>
+    </div>
   )
 }
