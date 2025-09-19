@@ -59,6 +59,7 @@ export const useWalletStore = create<WalletState>()(
           const { wallet } = await decryptWallet(encryptedWallet, password)
           
           set({
+            isConnected: true,
             isUnlocked: true,
             currentAccount: wallet,
             isLoading: false,

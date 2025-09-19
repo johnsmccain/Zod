@@ -44,6 +44,7 @@ export default function DashboardPage() {
     disconnect()
     router.push('/')
   }
+  // console.log(isConnected, isUnlocked, currentAccount)
 
   const copyAddress = () => {
     if (currentAccount?.address) {

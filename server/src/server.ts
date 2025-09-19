@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 dotenv.config();
 import app from "./app";
 
-const DB = process.env.DATABASE_URL || "mongodb://localhost:27017/guildwallet";
+const DB = process.env.DATABASE_URL || "";
 
 mongoose.connect(DB).then(() => {
   console.log("DB connection successful!");

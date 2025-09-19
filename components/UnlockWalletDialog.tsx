@@ -36,6 +36,7 @@ export function UnlockWalletDialog({ open, onOpenChange }: UnlockWalletDialogPro
     }
   }
 
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       handleUnlock()

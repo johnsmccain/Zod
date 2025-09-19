@@ -1,6 +1,6 @@
 import { mnemonicToAccount, privateKeyToAccount } from 'viem/accounts'
 import { generateMnemonic } from 'viem/accounts'
-import { english } from 'viem/accounts'
+import { wordlist as english } from '@scure/bip39/wordlists/english'
 import { keccak256, toHex } from 'viem'
 import { encrypt, decrypt } from './encryption'
 
@@ -10,9 +10,9 @@ import { encrypt, decrypt } from './encryption'
 function validateMnemonic(mnemonic: string): boolean {
   try {
     const words = mnemonic.trim().split(/\s+/)
-
-    // Check if it's 12 or 24 words
-    if (words.length !== 12 && words.length !== 24) {
+    
+    // Enforce 12-word mnemonics only
+    if (words.length !== 12) {
       return false
     }
 
@@ -43,7 +43,7 @@ export interface EncryptedWallet {
  * Generate a new wallet with mnemonic
  */
 export function generateWallet(): { mnemonic: string; account: WalletAccount } {
-  const mnemonic = generateMnemonic(english)
+  const mnemonic = generateMnemonic(english, 128)
   const account = mnemonicToAccount(mnemonic)
 
   return {
