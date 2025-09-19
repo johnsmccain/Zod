@@ -1,3 +1,5 @@
+'use client'
+
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import toast from 'react-hot-toast'
@@ -10,59 +12,76 @@ interface ConfirmStepProps {
 }
 
 export function ConfirmStep({ mnemonic, selectedWords, setSelectedWords, onComplete }: ConfirmStepProps) {
-  const [verificationWords, setVerificationWords] = useState<{position: number, value: string}[]>([])
-  const [inputValues, setInputValues] = useState<{[key: number]: string}>({})
-  
-  // Generate random positions to verify (typically 3-4 words)
+  const [verificationWords, setVerificationWords] = useState<{ position: number; value: string }[]>([])
+  const [inputValues, setInputValues] = useState<{ [key: number]: string }>({})
+
   useEffect(() => {
-    const words = mnemonic.split(' ')
-    const positions = []
+    if (!mnemonic) {
+      console.error('Mnemonic is empty')
+      toast.error('No mnemonic provided')
+      return
+    }
+    console.log('Mnemonic received:', mnemonic)
+    const words = mnemonic.split(' ').filter(word => word.trim())
+    console.log('Split words:', words)
+    const positions: { position: number; value: string }[] = []
     const usedPositions = new Set()
-    
-    // Generate 4 random unique positions
+
     while (positions.length < 4 && positions.length < words.length) {
       const randomPos = Math.floor(Math.random() * words.length)
       if (!usedPositions.has(randomPos)) {
         positions.push({
-          position: randomPos + 1, // 1-indexed for display
-          value: words[randomPos]
+          position: randomPos + 1,
+          value: words[randomPos].trim(),
         })
         usedPositions.add(randomPos)
       }
     }
-    
-    // Sort by position for display
+
     positions.sort((a, b) => a.position - b.position)
     setVerificationWords(positions)
-    
-    // Initialize input values
-    const initialInputs: {[key: number]: string} = {}
+
+    const initialInputs: { [key: number]: string } = {}
     positions.forEach(word => {
       initialInputs[word.position] = ''
     })
     setInputValues(initialInputs)
+    console.log('Verification words:', positions)
   }, [mnemonic])
 
   const handleInputChange = (position: number, value: string) => {
     setInputValues(prev => ({
       ...prev,
-      [position]: value.toLowerCase().trim()
+      [position]: value.trim(),
     }))
+    console.log('Input values:', { ...inputValues, [position]: value.trim() })
   }
 
   const isVerificationCorrect = () => {
-    return verificationWords.every(word => 
-      inputValues[word.position]?.toLowerCase() === word.value.toLowerCase()
-    )
+    let allCorrect = true
+    verificationWords.forEach(word => {
+      const input = (inputValues[word.position] || '').trim().toLowerCase()
+      // Optional: Normalize spaces to hyphens (comment out if strict matching is required)
+      // const normalizedInput = input.replace(/\s+/g, '-')
+      const expected = word.value.toLowerCase()
+      console.log(`Word #${word.position}: input="${input}", expected="${expected}"`)
+      if (input !== expected) {
+        allCorrect = false
+        toast.error(`Word #${word.position} is incorrect. Expected: ${expected}`)
+      }
+    })
+    return allCorrect
   }
 
   const handleVerify = () => {
+    console.log('handleVerify called')
     if (isVerificationCorrect()) {
+      console.log('Verification passed, calling onComplete')
+      setSelectedWords(verificationWords.map(word => word.value))
       onComplete()
     } else {
-      toast.error('Some words are incorrect. Please check and try again.')
-      // Clear incorrect inputs
-      const clearedInputs: {[key: number]: string} = {}
+      console.log('Verification failed')
+      const clearedInputs: { [key: number]: string } = {}
       verificationWords.forEach(word => {
         clearedInputs[word.position] = ''
       })
@@ -70,24 +89,27 @@ export function ConfirmStep({ mnemonic, selectedWords, setSelectedWords, onCompl
     }
   }
 
-  const allFieldsFilled = verificationWords.every(word => 
+  const allFieldsFilled = verificationWords.every(word =>
     inputValues[word.position]?.trim().length > 0
   )
 
   return (
-    <div className=" flex items-center justify-center p-4">
+    <div className="flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
-        {/* Header */}
+        <div className="text-gray-400 text-sm">
+          <p>Debug (remove in production):</p>
+          {verificationWords.map(word => (
+            <p key={word.position}>Word #{word.position}: {word.value}</p>
+          ))}
+        </div>
         <div className="text-center space-y-3">
           <h1 className="text-2xl font-semibold text-white">
             Verify Seed Phrase
           </h1>
           <p className="text-gray-400 text-sm leading-relaxed">
-            Please enter the words below to confirm you've saved them correctly
+            Enter the words below exactly as shown in the mnemonic (include hyphens, e.g., test-word-1).
           </p>
         </div>
-
-        {/* Word Input Fields */}
         <div className="space-y-4">
           {verificationWords.map((word) => (
             <div key={word.position} className="space-y-2">
@@ -105,8 +127,6 @@ export function ConfirmStep({ mnemonic, selectedWords, setSelectedWords, onCompl
             </div>
           ))}
         </div>
-
-        {/* Verify Button */}
         <Button
           onClick={handleVerify}
           disabled={!allFieldsFilled}
