@@ -91,9 +91,14 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[#0D1117] text-white relative">
+      <div
+        className="absolute top-0 right-0 w-1/2 h-full bg-[radial-gradient(circle_at_right,_rgba(0,242,255,0.2)_0%,_transparent_70%)]"
+        style={{ filter: 'blur(20px)' }}
+      ></div>
+
       {/* Header */}
-      <header className="border-b bg-card">
+      <header className="">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
             <Button 
@@ -111,7 +116,7 @@ export default function SettingsPage() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-2xl mx-auto space-y-6">
-          <Tabs defaultValue="wallet" className="w-full">
+          <Tabs defaultValue="wallet" className="w-full bg-[#0D1117] text-white">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="wallet">Wallet</TabsTrigger>
               <TabsTrigger value="network">Network</TabsTrigger>

@@ -41,10 +41,14 @@ export function CreateWalletDialog({ onComplete: onDialogComplete }: CreateWalle
     }
 
     try {
-      await createWallet(password) // Assume this sets isConnected and isUnlocked
-      setStep('mnemonic')
-      setMnemonic('test-word-1 test-word-2 test-word-3 test-word-4 test-word-5 test-word-6 test-word-7 test-word-8 test-word-9 test-word-10 test-word-11 test-word-12')
-      console.log('Mnemonic set:', mnemonic)
+      const result = await createWallet(password)
+      if (result && result.mnemonic) {
+        setMnemonic(result.mnemonic)
+        setStep('mnemonic')
+        console.log('Wallet created successfully with mnemonic')
+      } else {
+        throw new Error('No mnemonic returned from wallet creation')
+      }
     } catch (error) {
       toast.error('Failed to create wallet')
       console.error('Create wallet error:', error)

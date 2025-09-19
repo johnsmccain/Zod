@@ -1,5 +1,6 @@
 import { mnemonicToAccount, privateKeyToAccount } from 'viem/accounts'
 import { generateMnemonic } from 'viem/accounts'
+import { english } from 'viem/accounts'
 import { keccak256, toHex } from 'viem'
 import { encrypt, decrypt } from './encryption'
 
@@ -9,12 +10,12 @@ import { encrypt, decrypt } from './encryption'
 function validateMnemonic(mnemonic: string): boolean {
   try {
     const words = mnemonic.trim().split(/\s+/)
-    
+
     // Check if it's 12 or 24 words
     if (words.length !== 12 && words.length !== 24) {
       return false
     }
-    
+
     // Try to create an account from the mnemonic - this will validate against BIP39 wordlist
     mnemonicToAccount(mnemonic)
     return true
@@ -42,15 +43,15 @@ export interface EncryptedWallet {
  * Generate a new wallet with mnemonic
  */
 export function generateWallet(): { mnemonic: string; account: WalletAccount } {
-  const mnemonic = generateMnemonic()
+  const mnemonic = generateMnemonic(english)
   const account = mnemonicToAccount(mnemonic)
-  
+
   return {
     mnemonic,
     account: {
       address: account.address,
       privateKey: account.source,
-      publicKey: account.getPublicKey(),
+      publicKey: account.publicKey,
     }
   }
 }
@@ -62,13 +63,13 @@ export function importWalletFromMnemonic(mnemonic: string): WalletAccount {
   if (!validateMnemonic(mnemonic)) {
     throw new Error('Invalid mnemonic phrase')
   }
-  
+
   const account = mnemonicToAccount(mnemonic)
-  
+
   return {
     address: account.address,
     privateKey: account.source,
-    publicKey: account.getPublicKey(),
+    publicKey: account.publicKey,
   }
 }
 
@@ -78,11 +79,11 @@ export function importWalletFromMnemonic(mnemonic: string): WalletAccount {
 export function importWalletFromPrivateKey(privateKey: string): WalletAccount {
   try {
     const account = privateKeyToAccount(privateKey as `0x${string}`)
-    
+
     return {
       address: account.address,
       privateKey: account.source,
-      publicKey: account.getPublicKey(),
+      publicKey: account.publicKey,
     }
   } catch (error) {
     throw new Error('Invalid private key')
@@ -99,10 +100,10 @@ export async function encryptWallet(
 ): Promise<EncryptedWallet> {
   const salt = crypto.getRandomValues(new Uint8Array(16))
   const iv = crypto.getRandomValues(new Uint8Array(12))
-  
+
   const encryptedPrivateKey = await encrypt(wallet.privateKey, password, salt, iv)
   const encryptedMnemonic = mnemonic ? await encrypt(mnemonic, password, salt, iv) : undefined
-  
+
   return {
     encryptedPrivateKey,
     encryptedMnemonic,
@@ -122,12 +123,12 @@ export async function decryptWallet(
 ): Promise<{ wallet: WalletAccount; mnemonic?: string }> {
   const salt = new Uint8Array(Buffer.from(encryptedWallet.salt.slice(2), 'hex'))
   const iv = new Uint8Array(Buffer.from(encryptedWallet.iv.slice(2), 'hex'))
-  
+
   const privateKey = await decrypt(encryptedWallet.encryptedPrivateKey, password, salt, iv)
-  const mnemonic = encryptedWallet.encryptedMnemonic 
+  const mnemonic = encryptedWallet.encryptedMnemonic
     ? await decrypt(encryptedWallet.encryptedMnemonic, password, salt, iv)
     : undefined
-  
+
   return {
     wallet: {
       address: encryptedWallet.address,
