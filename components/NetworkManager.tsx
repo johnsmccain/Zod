@@ -1,25 +1,21 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { 
   ArrowLeft, 
   Search,
   MoreVertical,
   Plus,
-  Info
+  Info,
+  X
 } from 'lucide-react'
+import Image from 'next/image'
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
+import { useNetworkStore, type Network } from '@/stores/networkStore'
 
 interface NetworkManagerProps {
   isOpen: boolean
   onClose: () => void
-}
-
-interface Network {
-  id: string
-  name: string
-  icon: string
-  enabled: boolean
-  color: string
 }
 
 export function NetworkManager({ isOpen, onClose }: NetworkManagerProps) {
@@ -33,45 +29,128 @@ export function NetworkManager({ isOpen, onClose }: NetworkManagerProps) {
     blockExplorer: ''
   })
 
-  const [enabledNetworks, setEnabledNetworks] = useState<Network[]>([
-    { id: 'ethereum', name: 'Ethereum', icon: '⟠', enabled: true, color: 'bg-blue-500' },
-    { id: 'arbitrum', name: 'Arbitrum One', icon: '🔷', enabled: true, color: 'bg-blue-400' },
-    { id: 'base', name: 'Base', icon: '🔵', enabled: true, color: 'bg-blue-600' },
-    { id: 'solana', name: 'Solana', icon: '◎', enabled: true, color: 'bg-purple-500' }
-  ])
+  const { networks, addNetwork, updateNetwork, setCurrentChain } = useNetworkStore((s) => ({
+    networks: s.networks,
+    addNetwork: s.addNetwork,
+    updateNetwork: s.updateNetwork,
+    setCurrentChain: s.setCurrentChain,
+  }))
 
-  const [additionalNetworks] = useState<Network[]>([
-    { id: 'arbitrum-add', name: 'Arbitrum One', icon: '🔷', enabled: false, color: 'bg-blue-400' },
-    { id: 'polygon', name: 'Polygon', icon: '🟣', enabled: false, color: 'bg-purple-600' },
-    { id: 'avalanche', name: 'Avalanche Network C-Chain', icon: '🔺', enabled: false, color: 'bg-red-500' }
-  ])
+  type CatalogItem = {
+    id: number
+    name: string
+    rpcUrl: string
+    blockExplorer: string
+    currency: { name: string; symbol: string; decimals: number }
+    isTestnet: boolean
+    logoUrl?: string
+  }
+
+  const catalog: CatalogItem[] = useMemo(() => ([
+    {
+      id: 42161,
+      name: 'Arbitrum One',
+      rpcUrl: 'https://arb1.arbitrum.io/rpc',
+      blockExplorer: 'https://arbiscan.io',
+      currency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+      isTestnet: false,
+      logoUrl: '/logos/arbitrum.svg',
+    },
+    {
+      id: 10,
+      name: 'Optimism',
+      rpcUrl: 'https://mainnet.optimism.io',
+      blockExplorer: 'https://optimistic.etherscan.io',
+      currency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+      isTestnet: false,
+      logoUrl: '/logos/optimism.svg',
+    },
+    {
+      id: 8453,
+      name: 'Base',
+      rpcUrl: 'https://mainnet.base.org',
+      blockExplorer: 'https://basescan.org',
+      currency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+      isTestnet: false,
+      logoUrl: '/logos/base.svg',
+    },
+    {
+      id: 43114,
+      name: 'Avalanche C-Chain',
+      rpcUrl: 'https://api.avax.network/ext/bc/C/rpc',
+      blockExplorer: 'https://snowtrace.io',
+      currency: { name: 'Avalanche', symbol: 'AVAX', decimals: 18 },
+      isTestnet: false,
+      logoUrl: '/logos/avalanche.svg',
+    },
+    {
+      id: 56,
+      name: 'BNB Smart Chain',
+      rpcUrl: 'https://bsc-dataseed.binance.org',
+      blockExplorer: 'https://bscscan.com',
+      currency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+      isTestnet: false,
+      logoUrl: '/logos/bnb.svg',
+    },
+    {
+      id: 250,
+      name: 'Fantom Opera',
+      rpcUrl: 'https://rpc.ftm.tools',
+      blockExplorer: 'https://ftmscan.com',
+      currency: { name: 'Fantom', symbol: 'FTM', decimals: 18 },
+      isTestnet: false,
+      logoUrl: '/logos/fantom.svg',
+    },
+  ]), [])
+
+  const enabledById = useMemo(() => new Set<number>(networks.map(n => Number(n.id))), [networks])
+  const filteredAdditional = useMemo(
+    () => catalog
+      .filter(n => !enabledById.has(Number(n.id)))
+      .filter(n => n.name.toLowerCase().includes(searchQuery.toLowerCase())),
+    [catalog, enabledById, searchQuery]
+  )
 
   if (!isOpen) return null
 
-  const handleAddNetwork = (network: Network) => {
-    setEnabledNetworks(prev => [...prev, { ...network, enabled: true }])
+  const handleAddNetwork = (network: CatalogItem) => {
+    const toAdd: Network = {
+      id: network.id as any,
+      name: network.name,
+      rpcUrl: network.rpcUrl,
+      blockExplorer: network.blockExplorer,
+      currency: network.currency,
+      isTestnet: network.isTestnet,
+      logoUrl: network.logoUrl,
+    }
+    addNetwork(toAdd)
   }
 
   const handleAddCustomNetwork = () => {
     if (customNetwork.name && customNetwork.rpcUrl && customNetwork.chainId) {
+      const chainIdNum = Number(customNetwork.chainId)
+      if (!Number.isInteger(chainIdNum)) return
       const newNetwork: Network = {
-        id: `custom-${Date.now()}`,
+        id: chainIdNum as any,
         name: customNetwork.name,
-        icon: '🌐',
-        enabled: true,
-        color: 'bg-gray-500'
+        rpcUrl: customNetwork.rpcUrl,
+        blockExplorer: customNetwork.blockExplorer || '',
+        currency: { name: customNetwork.symbol || 'Native', symbol: customNetwork.symbol || 'NATIVE', decimals: 18 },
+        isTestnet: false,
+        logoUrl: undefined,
       }
-      setEnabledNetworks(prev => [...prev, newNetwork])
+      // If editing existing, update; else add
+      if (enabledById.has(chainIdNum)) {
+        updateNetwork(newNetwork)
+      } else {
+        addNetwork(newNetwork)
+      }
       setCustomNetwork({ name: '', rpcUrl: '', chainId: '', symbol: '', blockExplorer: '' })
       setShowAddCustomNetwork(false)
     }
   }
 
-  const filteredEnabledNetworks = enabledNetworks.filter(network =>
-    network.name.toLowerCase().includes(searchQuery.toLowerCase())
-  )
-
-  const filteredAdditionalNetworks = additionalNetworks.filter(network =>
+  const filteredEnabledNetworks = networks.filter(network =>
     network.name.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
@@ -191,6 +270,13 @@ export function NetworkManager({ isOpen, onClose }: NetworkManagerProps) {
           <ArrowLeft className="w-6 h-6" />
         </button>
         <h1 className="text-lg font-semibold">Manage networks</h1>
+        <button
+          onClick={onClose}
+          className="p-2 absolute right-4"
+          aria-label="Close"
+        >
+          <X className="w-5 h-5" />
+        </button>
       </header>
 
       {/* Content */}
@@ -213,15 +299,41 @@ export function NetworkManager({ isOpen, onClose }: NetworkManagerProps) {
           <div className="space-y-3">
             {filteredEnabledNetworks.map((network) => (
               <div key={network.id} className="flex items-center justify-between p-3 bg-gray-800/30 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className={`w-8 h-8 ${network.color} rounded-full flex items-center justify-center text-white text-sm font-bold`}>
-                    {network.icon}
+                <button onClick={() => { setCurrentChain(network.id as any); onClose(); }} className="flex items-center gap-3 text-left">
+                  {network.logoUrl ? (
+                    <Image src={network.logoUrl} alt={network.name} width={32} height={32} className="rounded-md" />
+                  ) : (
+                    <div className="w-8 h-8 bg-gray-600 rounded-md" />
+                  )}
+                  <div>
+                    <span className="text-white font-medium block">{network.name}</span>
+                    <span className="text-gray-400 text-xs">Chain ID: {String(network.id)}</span>
                   </div>
-                  <span className="text-white font-medium">{network.name}</span>
-                </div>
-                <button className="p-1">
-                  <MoreVertical className="w-5 h-5 text-gray-400" />
                 </button>
+                <DropdownMenu.Root>
+                  <DropdownMenu.Trigger asChild>
+                    <button className="p-1" aria-label="More actions">
+                      <MoreVertical className="w-5 h-5 text-gray-400" />
+                    </button>
+                  </DropdownMenu.Trigger>
+                  <DropdownMenu.Content className="min-w-[140px] bg-gray-900 border border-gray-700 rounded-md p-1 shadow-xl">
+                    <DropdownMenu.Item
+                      className="px-3 py-2 text-sm text-white hover:bg-gray-800 rounded-md cursor-pointer"
+                      onClick={() => {
+                        setCustomNetwork({
+                          name: network.name,
+                          rpcUrl: network.rpcUrl,
+                          chainId: String(network.id),
+                          symbol: network.currency.symbol,
+                          blockExplorer: network.blockExplorer,
+                        });
+                        setShowAddCustomNetwork(true);
+                      }}
+                    >
+                      Edit
+                    </DropdownMenu.Item>
+                  </DropdownMenu.Content>
+                </DropdownMenu.Root>
               </div>
             ))}
           </div>
@@ -234,13 +346,18 @@ export function NetworkManager({ isOpen, onClose }: NetworkManagerProps) {
             <Info className="w-4 h-4 text-gray-400" />
           </div>
           <div className="space-y-3">
-            {filteredAdditionalNetworks.map((network) => (
+            {filteredAdditional.map((network) => (
               <div key={network.id} className="flex items-center justify-between p-3 bg-gray-800/30 rounded-lg">
                 <div className="flex items-center gap-3">
-                  <div className={`w-8 h-8 ${network.color} rounded-full flex items-center justify-center text-white text-sm font-bold`}>
-                    {network.icon}
+                  {network.logoUrl ? (
+                    <Image src={network.logoUrl} alt={network.name} width={32} height={32} className="rounded-md" />
+                  ) : (
+                    <div className="w-8 h-8 bg-gray-600 rounded-md" />
+                  )}
+                  <div>
+                    <span className="text-white font-medium block">{network.name}</span>
+                    <span className="text-gray-400 text-xs">Chain ID: {String(network.id)}</span>
                   </div>
-                  <span className="text-white font-medium">{network.name}</span>
                 </div>
                 <button 
                   onClick={() => handleAddNetwork(network)}

@@ -24,6 +24,8 @@ export function useWallet() {
     setLoading,
     setError,
     clearError,
+    addAccount,
+    switchAccount,
   } = useWalletStore();
 
   const createWallet = useCallback(
@@ -50,6 +52,29 @@ export function useWallet() {
       }
     },
     [setWallet, setLoading, setError, clearError]
+  );
+
+  const createAdditionalAccount = useCallback(
+    async (password: string) => {
+      setLoading(true);
+      clearError();
+      try {
+        const { mnemonic, account } = generateWallet();
+        const encrypted = await encryptWallet(account, password, mnemonic);
+        addAccount(account, encrypted);
+        switchAccount(account.address);
+        toast.success("Account created");
+        return { mnemonic, account };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to create account';
+        setError(message);
+        toast.error(message);
+        throw error;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [addAccount, switchAccount, setLoading, setError, clearError]
   );
 
   const importFromMnemonic = useCallback(
@@ -142,6 +167,7 @@ export function useWallet() {
     createWallet,
     importFromMnemonic,
     importFromPrivateKey,
+    createAdditionalAccount,
     unlock,
     lock,
     disconnect,

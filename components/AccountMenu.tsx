@@ -12,9 +12,11 @@ import {
   EyeOff,
   Home,
   Activity,
-  Settings
+  Settings,
+  ExternalLink
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useNetworkStore } from '@/stores/networkStore'
 
 interface AccountMenuProps {
   isOpen: boolean
@@ -24,9 +26,11 @@ interface AccountMenuProps {
 export function AccountMenu({ isOpen, onClose }: AccountMenuProps) {
   const router = useRouter()
   const { currentAccount } = useWallet()
+  const { currentChainId, networks } = useNetworkStore((s) => ({ currentChainId: s.currentChainId, networks: s.networks }))
   const [showPrivateKey, setShowPrivateKey] = useState(false)
   const [showMnemonic, setShowMnemonic] = useState(false)
-  const [networks, setNetworks] = useState({
+
+  const [featureToggles, setFeatureToggles] = useState({
     ethereum: true,
     megaTestnet: false,
     baseMainnet: false
@@ -39,8 +43,19 @@ export function AccountMenu({ isOpen, onClose }: AccountMenuProps) {
     toast.success(`${label} copied to clipboard`)
   }
 
+  const viewOnExplorer = () => {
+    if (!currentAccount) return
+    const net = networks.find(n => n.id === currentChainId)
+    if (!net || !net.blockExplorer) {
+      toast.error('Block explorer not configured for this network')
+      return
+    }
+    const url = `${net.blockExplorer.replace(/\/$/, '')}/address/${currentAccount.address}`
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
+
   const toggleNetwork = (network: string) => {
-    setNetworks(prev => ({
+    setFeatureToggles(prev => ({
       ...prev,
       [network]: !prev[network as keyof typeof prev]
     }))
@@ -88,8 +103,17 @@ export function AccountMenu({ isOpen, onClose }: AccountMenuProps) {
               </span>
               <button 
                 onClick={() => currentAccount && copyToClipboard(currentAccount.address, 'Address')}
+                title="Copy address"
+                className="p-1 hover:bg-gray-800 rounded"
               >
-                <ChevronRight className="w-4 h-4 text-gray-400" />
+                <Copy className="w-3.5 h-3.5 text-gray-400" />
+              </button>
+              <button 
+                onClick={viewOnExplorer}
+                title="View on Explorer"
+                className="p-1 hover:bg-gray-800 rounded"
+              >
+                <ExternalLink className="w-3.5 h-3.5 text-cyan-400" />
               </button>
             </div>
           </div>
@@ -184,11 +208,11 @@ export function AccountMenu({ isOpen, onClose }: AccountMenuProps) {
               <button 
                 onClick={() => toggleNetwork('ethereum')}
                 className={`w-12 h-6 rounded-full transition-colors ${
-                  networks.ethereum ? 'bg-cyan-400' : 'bg-gray-600'
+                  featureToggles.ethereum ? 'bg-cyan-400' : 'bg-gray-600'
                 }`}
               >
                 <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                  networks.ethereum ? 'translate-x-6' : 'translate-x-0.5'
+                  featureToggles.ethereum ? 'translate-x-6' : 'translate-x-0.5'
                 } mt-0.5`} />
               </button>
             </div>
@@ -198,11 +222,11 @@ export function AccountMenu({ isOpen, onClose }: AccountMenuProps) {
               <button 
                 onClick={() => toggleNetwork('megaTestnet')}
                 className={`w-12 h-6 rounded-full transition-colors ${
-                  networks.megaTestnet ? 'bg-cyan-400' : 'bg-gray-600'
+                  featureToggles.megaTestnet ? 'bg-cyan-400' : 'bg-gray-600'
                 }`}
               >
                 <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                  networks.megaTestnet ? 'translate-x-6' : 'translate-x-0.5'
+                  featureToggles.megaTestnet ? 'translate-x-6' : 'translate-x-0.5'
                 } mt-0.5`} />
               </button>
             </div>
@@ -212,11 +236,11 @@ export function AccountMenu({ isOpen, onClose }: AccountMenuProps) {
               <button 
                 onClick={() => toggleNetwork('baseMainnet')}
                 className={`w-12 h-6 rounded-full transition-colors ${
-                  networks.baseMainnet ? 'bg-cyan-400' : 'bg-gray-600'
+                  featureToggles.baseMainnet ? 'bg-cyan-400' : 'bg-gray-600'
                 }`}
               >
                 <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                  networks.baseMainnet ? 'translate-x-6' : 'translate-x-0.5'
+                  featureToggles.baseMainnet ? 'translate-x-6' : 'translate-x-0.5'
                 } mt-0.5`} />
               </button>
             </div>

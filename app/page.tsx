@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { CreateWalletDialog, ImportWalletDialog, UnlockWalletDialog } from '@/components'
+import { CreateWalletDialog, UnlockWalletDialog } from '@/components'
 import { useWallet } from '@/hooks/useWallet'
 import WelcomeSection from '../components/WelcomeSection'
 
@@ -10,7 +10,6 @@ export default function HomePage() {
   const router = useRouter()
   const { isConnected, isUnlocked } = useWallet()
   const [showCreateFlow, setShowCreateFlow] = useState(false)
-  const [showImportDialog, setShowImportDialog] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
   // Check wallet state on mount
@@ -62,7 +61,7 @@ export default function HomePage() {
       {!showCreateFlow ? (
         <WelcomeSection
           setShowCreateDialog={setShowCreateFlow}
-          setShowImportDialog={setShowImportDialog}
+          onImportClick={() => router.push('/import')}
         />
       ) : (
         <CreateWalletDialog 
@@ -72,11 +71,6 @@ export default function HomePage() {
           }} 
         />
       )}
-
-      <ImportWalletDialog
-        open={showImportDialog}
-        onOpenChange={setShowImportDialog}
-      />
     </div>
   )
 }

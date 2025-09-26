@@ -13,6 +13,7 @@ export interface Network {
     decimals: number
   }
   isTestnet: boolean
+  logoUrl?: string
 }
 
 export interface NetworkState {
@@ -24,6 +25,7 @@ export interface NetworkState {
   // Actions
   setCurrentChain: (chainId: SupportedChainId) => void
   addNetwork: (network: Network) => void
+  updateNetwork: (network: Network) => void
   removeNetwork: (chainId: SupportedChainId) => void
   setLoading: (loading: boolean) => void
   setError: (error: string | null) => void
@@ -42,6 +44,7 @@ const DEFAULT_NETWORKS: Network[] = [
       decimals: 18,
     },
     isTestnet: false,
+    logoUrl: '/logos/ethereum.svg',
   },
   {
     id: 11155111,
@@ -54,6 +57,7 @@ const DEFAULT_NETWORKS: Network[] = [
       decimals: 18,
     },
     isTestnet: true,
+    logoUrl: '/logos/ethereum.svg',
   },
   {
     id: 137,
@@ -66,6 +70,7 @@ const DEFAULT_NETWORKS: Network[] = [
       decimals: 18,
     },
     isTestnet: false,
+    logoUrl: '/logos/polygon.svg',
   },
 ]
 
@@ -109,6 +114,19 @@ export const useNetworkStore = create<NetworkState>()(
         })
       },
 
+      updateNetwork: (network: Network) => {
+        const { networks } = get()
+        const exists = networks.find(n => n.id === network.id)
+        if (!exists) {
+          set({ error: 'Network not found' })
+          return
+        }
+        set({
+          networks: networks.map(n => (n.id === network.id ? network : n)),
+          error: null,
+        })
+      },
+
       removeNetwork: (chainId: SupportedChainId) => {
         const { networks, currentChainId } = get()
         
@@ -146,6 +164,27 @@ export const useNetworkStore = create<NetworkState>()(
     {
       name: 'network-storage',
       storage: createJSONStorage(() => localStorage),
+      version: 1,
+      migrate: (persistedState: any, version) => {
+        // Backfill logos for known networks if missing
+        if (persistedState && persistedState.networks) {
+          const withLogos = persistedState.networks.map((n: any) => {
+            if (!n.logoUrl) {
+              if (n.id === 1 || n.id === 11155111) return { ...n, logoUrl: '/logos/ethereum.svg' }
+              if (n.id === 137) return { ...n, logoUrl: '/logos/polygon.svg' }
+              if (n.id === 42161) return { ...n, logoUrl: '/logos/arbitrum.svg' }
+              if (n.id === 8453) return { ...n, logoUrl: '/logos/base.svg' }
+              if (n.id === 10) return { ...n, logoUrl: '/logos/optimism.svg' }
+              if (n.id === 43114) return { ...n, logoUrl: '/logos/avalanche.svg' }
+              if (n.id === 56) return { ...n, logoUrl: '/logos/bnb.svg' }
+              if (n.id === 250) return { ...n, logoUrl: '/logos/fantom.svg' }
+            }
+            return n
+          })
+          return { ...persistedState, networks: withLogos }
+        }
+        return persistedState
+      },
       partialize: (state) => ({
         currentChainId: state.currentChainId,
         networks: state.networks,

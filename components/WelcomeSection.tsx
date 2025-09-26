@@ -3,15 +3,16 @@
 import { Button } from '@/components/ui/button'
 import { Shield, Settings, Zap } from 'lucide-react'
 import { Dispatch, SetStateAction } from 'react'
+
 import Image from 'next/image'
 import od from '../public/od.png'
 
 interface WelcomeSectionProps {
   setShowCreateDialog: Dispatch<SetStateAction<boolean>>
-  setShowImportDialog: Dispatch<SetStateAction<boolean>>
+  onImportClick?: () => void
 }
 
-export default function WelcomeSection({ setShowCreateDialog, setShowImportDialog }: WelcomeSectionProps) {
+export default function WelcomeSection({ setShowCreateDialog, onImportClick }: WelcomeSectionProps) {
   return (
     <div className="bg-[#0D1117] min-h-screen flex flex-col items-center justify-center w-full px-4 relative">
       
@@ -74,7 +75,7 @@ export default function WelcomeSection({ setShowCreateDialog, setShowImportDialo
             Create New Wallet
           </Button>
           <Button 
-            onClick={() => setShowImportDialog(true)}
+            onClick={() => (onImportClick ? onImportClick() : undefined)}
             className="w-full bg-transparent hover:bg-gray-800/50 text-cyan-400 font-semibold py-4 rounded-lg border-2 border-gray-700 hover:border-gray-600 text-base transition-colors"
           >
             Import existing Wallet
