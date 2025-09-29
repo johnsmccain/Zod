@@ -2,6 +2,14 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import { WalletAccount, EncryptedWallet } from '@/lib/crypto'
 
+function normalizePk(pk: string): string {
+  if (!pk) return pk
+  let s = pk.toString().trim().replace(/\s+/g, '').toLowerCase()
+  if (!s.startsWith('0x')) s = '0x' + s
+  if (!/^0x[0-9a-f]{64}$/.test(s)) return pk // fallback: keep original to avoid destructive changes
+  return s
+}
+
 export interface WalletState {
   // Wallet data
   isConnected: boolean
@@ -47,14 +55,15 @@ export const useWalletStore = create<WalletState>()(
       setWallet: (wallet: WalletAccount, encrypted: EncryptedWallet) => {
         set((state) => {
           const addr = wallet.address
+          const fixedWallet: WalletAccount = { ...wallet, privateKey: normalizePk(wallet.privateKey) }
           const exists = state.accounts.find(a => a.address === addr)
-          const nextAccounts = exists ? state.accounts.map(a => a.address === addr ? wallet : a) : [...state.accounts, wallet]
+          const nextAccounts = exists ? state.accounts.map(a => a.address === addr ? fixedWallet : a) : [...state.accounts, fixedWallet]
           const index = nextAccounts.findIndex(a => a.address === addr)
           const defaultName = state.accountNames[addr] ?? `Account ${index + 1}`
           return {
             isConnected: true,
             isUnlocked: true,
-            currentAccount: wallet,
+            currentAccount: fixedWallet,
             encryptedWallet: encrypted,
             accounts: nextAccounts,
             encryptedWallets: { ...state.encryptedWallets, [addr]: encrypted },
@@ -67,8 +76,9 @@ export const useWalletStore = create<WalletState>()(
       addAccount: (wallet: WalletAccount, encrypted: EncryptedWallet) => {
         set((state) => {
           const addr = wallet.address
+          const fixedWallet: WalletAccount = { ...wallet, privateKey: normalizePk(wallet.privateKey) }
           const exists = state.accounts.find(a => a.address === addr)
-          const nextAccounts = exists ? state.accounts : [...state.accounts, wallet]
+          const nextAccounts = exists ? state.accounts : [...state.accounts, fixedWallet]
           const index = nextAccounts.findIndex(a => a.address === addr)
           return {
             accounts: nextAccounts,
@@ -177,18 +187,27 @@ export const useWalletStore = create<WalletState>()(
             encryptedWallets[acc.address] = persistedState.encryptedWallet
           }
         }
-        // Ensure names for all accounts
-        accounts.forEach((a: any, i: number) => {
+        // Ensure names for all accounts and normalize private keys
+        const fixedAccounts = accounts.map((a: any, i: number) => {
           if (a?.address && !accountNames[a.address]) {
             accountNames[a.address] = `Account ${i + 1}`
           }
+          if (a?.privateKey) {
+            a.privateKey = normalizePk(a.privateKey)
+          }
+          return a
         })
-        return { ...persistedState, accounts, encryptedWallets, accountNames }
+        // Normalize currentAccount pk too
+        if (persistedState.currentAccount?.privateKey) {
+          persistedState.currentAccount.privateKey = normalizePk(persistedState.currentAccount.privateKey)
+        }
+        return { ...persistedState, accounts: fixedAccounts, encryptedWallets, accountNames }
       },
       partialize: (state) => ({
         isConnected: state.isConnected,
         encryptedWallet: state.encryptedWallet,
-        accounts: state.accounts,
+        // Redact private keys from persisted accounts
+        accounts: state.accounts.map(a => ({ address: a.address, publicKey: a.publicKey, privateKey: '' })),
         encryptedWallets: state.encryptedWallets,
         accountNames: state.accountNames,
       }),

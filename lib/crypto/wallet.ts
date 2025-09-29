@@ -50,7 +50,8 @@ export function generateWallet(): { mnemonic: string; account: WalletAccount } {
     mnemonic,
     account: {
       address: account.address,
-      privateKey: account.source,
+      // For mnemonic-based account, do not store a fake/unknown private key
+      privateKey: '',
       publicKey: account.publicKey,
     }
   }
@@ -68,7 +69,8 @@ export function importWalletFromMnemonic(mnemonic: string): WalletAccount {
 
   return {
     address: account.address,
-    privateKey: account.source,
+    // For mnemonic-based account, private key is derived on-the-fly for signing
+    privateKey: '',
     publicKey: account.publicKey,
   }
 }
@@ -78,11 +80,14 @@ export function importWalletFromMnemonic(mnemonic: string): WalletAccount {
  */
 export function importWalletFromPrivateKey(privateKey: string): WalletAccount {
   try {
-    const account = privateKeyToAccount(privateKey as `0x${string}`)
+    // Normalize provided private key
+    let pk = privateKey.toString().trim().toLowerCase().replace(/\s+/g,'')
+    if (!pk.startsWith('0x')) pk = '0x' + pk
+    const account = privateKeyToAccount(pk as `0x${string}`)
 
     return {
       address: account.address,
-      privateKey: account.source,
+      privateKey: pk,
       publicKey: account.publicKey,
     }
   } catch (error) {
@@ -121,8 +126,17 @@ export async function decryptWallet(
   encryptedWallet: EncryptedWallet,
   password: string
 ): Promise<{ wallet: WalletAccount; mnemonic?: string }> {
-  const salt = new Uint8Array(Buffer.from(encryptedWallet.salt.slice(2), 'hex'))
-  const iv = new Uint8Array(Buffer.from(encryptedWallet.iv.slice(2), 'hex'))
+  const hexToU8 = (hex: string) => {
+    let h = hex.startsWith('0x') ? hex.slice(2) : hex
+    if (h.length % 2 !== 0) h = '0' + h
+    const out = new Uint8Array(h.length / 2)
+    for (let i = 0; i < out.length; i++) {
+      out[i] = parseInt(h.substr(i * 2, 2), 16)
+    }
+    return out
+  }
+  const salt = hexToU8(encryptedWallet.salt)
+  const iv = hexToU8(encryptedWallet.iv)
 
   const privateKey = await decrypt(encryptedWallet.encryptedPrivateKey, password, salt, iv)
   const mnemonic = encryptedWallet.encryptedMnemonic

@@ -36,7 +36,7 @@ const DEFAULT_NETWORKS: Network[] = [
   {
     id: 1,
     name: 'Ethereum Mainnet',
-    rpcUrl: 'https://eth-mainnet.g.alchemy.com/v2/demo',
+    rpcUrl: 'https://ethereum.publicnode.com',
     blockExplorer: 'https://etherscan.io',
     currency: {
       name: 'Ethereum',
@@ -49,7 +49,7 @@ const DEFAULT_NETWORKS: Network[] = [
   {
     id: 11155111,
     name: 'Sepolia Testnet',
-    rpcUrl: 'https://sepolia.infura.io/v3/demo',
+    rpcUrl: 'https://rpc.sepolia.org',
     blockExplorer: 'https://sepolia.etherscan.io',
     currency: {
       name: 'Sepolia Ether',
@@ -179,7 +179,17 @@ export const useNetworkStore = create<NetworkState>()(
               if (n.id === 56) return { ...n, logoUrl: '/logos/bnb.svg' }
               if (n.id === 250) return { ...n, logoUrl: '/logos/fantom.svg' }
             }
-            return n
+            // Replace known demo RPCs with stable public ones
+            let rpcUrl = n.rpcUrl
+            if (typeof rpcUrl === 'string') {
+              if (rpcUrl.includes('alchemy.com/v2/demo')) {
+                rpcUrl = n.id === 1 ? 'https://ethereum.publicnode.com' : rpcUrl
+              }
+              if (rpcUrl.includes('infura.io/v3/demo')) {
+                rpcUrl = n.id === 11155111 ? 'https://rpc.sepolia.org' : rpcUrl
+              }
+            }
+            return { ...n, rpcUrl }
           })
           return { ...persistedState, networks: withLogos }
         }

@@ -199,22 +199,19 @@ export class GuildWalletProvider {
 // Helper functions
 function createWalletClientForChain(chainId: SupportedChainId, privateKey: string) {
   const chain = SUPPORTED_CHAINS[chainId]
+  const { networks } = useNetworkStore.getState()
+  const active = networks.find(n => n.id === chainId)
+  const url = active?.rpcUrl || (chain as any)?.rpcUrls?.default?.http?.[0]
   const account = privateKeyToAccount(privateKey as `0x${string}`)
-  
-  return createWalletClient({
-    account,
-    chain,
-    transport: http(),
-  })
+  return createWalletClient({ account, chain, transport: http(url) })
 }
 
 function createPublicClientForChain(chainId: SupportedChainId) {
   const chain = SUPPORTED_CHAINS[chainId]
-  
-  return createPublicClient({
-    chain,
-    transport: http(),
-  })
+  const { networks } = useNetworkStore.getState()
+  const active = networks.find(n => n.id === chainId)
+  const url = active?.rpcUrl || (chain as any)?.rpcUrls?.default?.http?.[0]
+  return createPublicClient({ chain, transport: http(url) })
 }
 
 // Global provider injection

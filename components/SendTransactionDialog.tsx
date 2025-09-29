@@ -9,6 +9,7 @@ import { useTransactions } from '@/hooks/useTransactions'
 import { useNetwork } from '@/hooks/useNetwork'
 import { isValidAddress } from '@/lib/crypto'
 import toast from 'react-hot-toast'
+import { RepairKeyDialog } from './repair/RepairKeyDialog'
 
 interface SendTransactionDialogProps {
   open: boolean
@@ -21,6 +22,8 @@ export function SendTransactionDialog({ open, onOpenChange }: SendTransactionDia
   const [to, setTo] = useState('')
   const [value, setValue] = useState('')
   const [password, setPassword] = useState('')
+  const [showRepair, setShowRepair] = useState(false)
+  const [pendingTx, setPendingTx] = useState<{to:`0x${string}`; value:string} | null>(null)
 
   const network = getCurrentNetwork()
 
@@ -49,7 +52,12 @@ export function SendTransactionDialog({ open, onOpenChange }: SendTransactionDia
       onOpenChange(false)
       resetForm()
     } catch (error) {
-      // Error is handled in the hook
+      const msg = error instanceof Error ? error.message : String(error)
+      if (msg.includes('Invalid private key') || msg.includes('No encrypted key') || msg.includes('password')) {
+        // Offer repair flow
+        setPendingTx({ to: to as `0x${string}`, value })
+        setShowRepair(true)
+      }
     }
   }
 
@@ -118,6 +126,21 @@ export function SendTransactionDialog({ open, onOpenChange }: SendTransactionDia
           </Button>
         </div>
       </DialogContent>
+      <RepairKeyDialog
+        open={showRepair}
+        onOpenChange={setShowRepair}
+        onRepaired={async () => {
+          if (pendingTx) {
+            try {
+              await sendTransaction(pendingTx, password)
+              toast.success('Transaction sent!')
+              setShowRepair(false)
+              onOpenChange(false)
+              resetForm()
+            } catch {}
+          }
+        }}
+      />
     </Dialog>
   )
 }

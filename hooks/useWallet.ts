@@ -81,11 +81,9 @@ export function useWallet() {
     async (mnemonic: string, password: string) => {
       setLoading(true);
       clearError();
-      console.log(mnemonic)
 
       try {
         const account = importWalletFromMnemonic(mnemonic);
-        console.log(account)
         const encrypted = await encryptWallet(account, password, mnemonic);
 
         setWallet(account, encrypted);
